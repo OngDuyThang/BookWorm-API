@@ -10,7 +10,7 @@
 [![Stripe](https://img.shields.io/badge/Stripe-Payments-008CDD?logo=stripe&logoColor=white)](https://stripe.com/)
 [![AWS S3](https://img.shields.io/badge/AWS-S3_Storage-569A31?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/s3/)
 
-> A production-grade bookstore e-commerce backend built with **NestJS**, organized as a **monorepo microservices architecture**. Features a hybrid API layer (GraphQL for client SPAs, REST for administrative operations), asynchronous event-driven RPC inter-service communication over **RabbitMQ**, database-per-service isolation with **PostgreSQL/TypeORM**, two-factor authentication (2FA/TOTP), Stripe payment integration, AWS S3 asset pipeline, and a dedicated Server-Side Rendered (SSR) Admin Management Dashboard using Handlebars and Tailwind CSS.
+> A production-grade bookstore e-commerce backend built with **NestJS**, organized as a **monorepo microservices architecture**. Features a hybrid API layer (GraphQL for the Next.js Pages Router storefront, REST for administrative operations), asynchronous event-driven RPC inter-service communication over **RabbitMQ**, database-per-service isolation with **PostgreSQL/TypeORM**, two-factor authentication (2FA/TOTP), Stripe payment integration, AWS S3 asset pipeline, and a dedicated Server-Side Rendered (SSR) Admin Management Dashboard using Handlebars and Tailwind CSS.
 
 ---
 
@@ -45,8 +45,8 @@ The BookWorm backend leverages NestJS's first-class monorepo support to implemen
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              CLIENT TIER                                    │
 │   ┌─────────────────────────────┐         ┌─────────────────────────────┐   │
-│   │   Customer Single-Page App  │         │   Admin Browser / Manager   │   │
-│   │   (Next.js + Apollo Client) │         │     (SSR Web Dashboard)     │   │
+│   │   Customer Web Storefront   │         │   Admin Browser / Manager   │   │
+│   │  (Next.js Pages Router App) │         │     (SSR Web Dashboard)     │   │
 │   └──────────────┬──────────────┘         └──────────────┬──────────────┘   │
 └──────────────────┼───────────────────────────────────────┼──────────────────┘
                    │ GraphQL (Public Storefront)           │ HTTP REST & SSR
@@ -132,7 +132,7 @@ BookWorm-API/
                     ▼                                                   ▼
        ┌─────────────────────────┐                         ┌─────────────────────────┐
        │   Customer Storefront   │                         │     Admin Operator      │
-       │    (Next.js / React)    │                         │    (Browser Client)     │
+       │ (Next.js Pages Router)  │                         │    (Browser Client)     │
        └────────────┬────────────┘                         └────────────┬────────────┘
                     │                                                   │
                     │ GraphQL (Customer Actions)                        │ HTTP GET / POST
