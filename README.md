@@ -9,8 +9,9 @@
 [![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)](https://redis.io/)
 [![Stripe](https://img.shields.io/badge/Stripe-Payments-008CDD?logo=stripe&logoColor=white)](https://stripe.com/)
 [![AWS S3](https://img.shields.io/badge/AWS-S3_Storage-569A31?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/s3/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-Media_Platform-3448C5?logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 
-> A production-grade bookstore e-commerce backend built with **NestJS**, organized as a **monorepo microservices architecture**. Features a hybrid API layer (GraphQL for the Next.js Pages Router storefront, REST for administrative operations), asynchronous event-driven RPC inter-service communication over **RabbitMQ**, database-per-service isolation with **PostgreSQL/TypeORM**, two-factor authentication (2FA/TOTP), Stripe payment integration, AWS S3 asset pipeline, and a dedicated Server-Side Rendered (SSR) Admin Management Dashboard using Handlebars and Tailwind CSS.
+> A production-grade bookstore e-commerce backend built with **NestJS**, organized as a **monorepo microservices architecture**. Features a hybrid API layer (GraphQL for the Next.js Pages Router storefront, REST for administrative operations), asynchronous event-driven RPC inter-service communication over **RabbitMQ**, database-per-service isolation with **PostgreSQL/TypeORM**, two-factor authentication (2FA/TOTP), Stripe payment integration, Cloudinary and AWS S3 asset pipeline, and a dedicated Server-Side Rendered (SSR) Admin Management Dashboard using Handlebars and Tailwind CSS.
 
 ---
 
@@ -60,7 +61,7 @@ The BookWorm backend leverages NestJS's first-class monorepo support to implemen
 │          │                  │                  │                 │          │
 │   ┌──────┴───────┐   ┌──────┴───────┐          │                 │          │
 │   │Upload Service│   │Asset Service │          │                 │          │
-│   │  (REST+S3)   │   │ (REST + DB)  │          │                 │          │
+│   │ (REST+Cloud) │   │ (REST + DB)  │          │                 │          │
 │   └──────────────┘   └──────────────┘          │                 │          │
 │   ┌─────────────────────────────────┐          │                 │          │
 │   │  Admin MVC Dashboard (SSR/HBS)  │          │                 │          │
@@ -100,7 +101,7 @@ BookWorm-API/
 │   ├── mvc/                       # Admin management web dashboard (SSR Handlebars)
 │   ├── order/                     # Order lifecycle, checkout & Stripe payments
 │   ├── product/                   # Catalog, books, categories, authors, promotions, reviews
-│   └── upload/                    # File handling & AWS S3 upload pipeline
+│   └── upload/                    # File handling & Cloudinary/AWS S3 upload pipeline
 ├── libs/                          # Shared Domain & Infrastructure Libraries
 │   ├── cache/                     # Redis cache manager module
 │   ├── common/                    # Guards, interceptors, filters, decorators, pipes, enums
@@ -540,17 +541,17 @@ Administrative staff interact with the system via a dedicated Server-Side Render
 │           apps/mvc (Port 8081)       │   │                apps/upload (Port 3004)                │
 │ ┌──────────────────────────────────┐ │   │ ┌───────────────────────────────────────────────────┐ │
 │ │ DashboardMiddleware              │ │   │ │ ParseFilePipe (max 50MB, jpg/png/jpeg)            │ │
-│ │ - Validates fingerprint & refresh│ │   │ │ S3Service (@aws-sdk/lib-storage)                  │ │
+│ │ - Validates fingerprint & refresh│ │   │ │ Cloudinary (v2) / S3Service (v1)                  │ │
 │ │   token cookies; redirects to    │ │   │ └─────────────────────────┬─────────────────────────┘ │
 │ │   /auth/dashboard-login if absent│ │   └───────────────────────────┼───────────────────────────┘
 │ └────────────────┬─────────────────┘                                 │
 │                  │                                                   ▼
 │                  │ 2. Aggregates data:               ┌───────────────────────────────────────┐
-│                  │    - GET /api/authors (Product)   │          Amazon S3 Bucket             │
+│                  │    - GET /api/authors (Product)   │          Cloudinary / AWS S3          │
 │                  │    - GET /api/categories (Product)│          (Public CDN URL)             │
 │                  │    - GET /api/promotions (Product)└───────────────────────────────────────┘
 │                  │                                                   ▲
-│                  ▼                                                   │ 5. Returns S3 image URL
+│                  ▼                                                   │ 5. Returns image URL
 │ ┌──────────────────────────────────┐                                 │
 │ │ Handlebars Template Compilation  │                                 │
 │ │ - views/product/create.hbs       │─────────────────────────────────┘
@@ -608,10 +609,10 @@ Administrative staff interact with the system via a dedicated Server-Side Render
 ### 5. `apps/upload` (File Storage Pipeline)
 - **Port**: `3004`
 - **Transport**: HTTP REST
-- **Cloud Provider**: AWS S3 SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/lib-storage`)
+- **Cloud Provider**: Cloudinary (v2), AWS S3 SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/lib-storage` - v1 legacy)
 - **Key Features**:
   - Validated multipart form uploads using `Multer` and `ParseFilePipe`.
-  - Automatic stream uploading to Amazon S3 buckets returning permanent public asset URLs.
+  - Automatic stream uploading to Cloudinary (v2) or Amazon S3 buckets returning permanent public asset URLs.
 
 ### 6. `apps/asset` (Static CMS & Site Pages)
 - **Port**: `3005`
@@ -742,8 +743,8 @@ type Mutation {
 - `DELETE /api/orders/:id` — Remove order record (`ROLE.ADMIN`).
 
 #### Upload Service (`http://localhost:3004/api`)
-- `POST /api/upload/product-image` — Multipart upload for book cover images -> AWS S3.
-- `POST /api/upload/user-picture` — Multipart upload for user avatars -> AWS S3.
+- `POST /api/upload/product-image` — Multipart upload for book cover images -> Cloudinary (v2) / AWS S3 (v1).
+- `POST /api/upload/user-picture` — Multipart upload for user avatars -> Cloudinary (v2) / AWS S3 (v1).
 
 #### Asset Service (`http://localhost:3005/api`)
 - `GET /api/assets/about-page` — Fetch store About Page copy.
@@ -804,7 +805,7 @@ RABBIT_MQ_URI=amqp://guest:guest@localhost:5672
 | `product` | `DB_NAME=bookworm_product`<br>`SERVICE_PORT=3001`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue` |
 | `cart` | `DB_NAME=bookworm_cart`<br>`SERVICE_PORT=3002`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue` |
 | `order` | `DB_NAME=bookworm_order`<br>`SERVICE_PORT=3003`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue`<br>`STRIPE_SECRET_KEY=sk_test_...` |
-| `upload` | `SERVICE_PORT=3004`<br>`AWS_S3_REGION=us-east-1`<br>`AWS_S3_BUCKET=bookworm-assets`<br>`AWS_ACCESS_KEY=your_aws_access_key`<br>`AWS_SECRET_KEY=your_aws_secret_key` |
+| `upload` | `SERVICE_PORT=3004`<br>`CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name`<br>`CLOUDINARY_API_KEY=your_cloudinary_api_key`<br>`CLOUDINARY_API_SECRET=your_cloudinary_api_secret`<br>`AWS_S3_REGION=us-east-1`<br>`AWS_S3_BUCKET=bookworm-assets`<br>`AWS_ACCESS_KEY=your_aws_access_key`<br>`AWS_SECRET_KEY=your_aws_secret_key` |
 | `asset` | `DB_NAME=bookworm_asset`<br>`SERVICE_PORT=3005`<br>`AUTH_QUEUE=auth_queue` |
 | `mvc` | `PORT=8081`<br>`METHOD=http`<br>`AUTH_SERVICE_HOST_NAME=localhost`<br>`AUTH_SERVICE_PORT=3000`<br>`PRODUCT_SERVICE_HOST_NAME=localhost`<br>`PRODUCT_SERVICE_PORT=3001`<br>`CART_SERVICE_HOST_NAME=localhost`<br>`CART_SERVICE_PORT=3002`<br>`ORDER_SERVICE_HOST_NAME=localhost`<br>`ORDER_SERVICE_PORT=3003`<br>`UPLOAD_SERVICE_HOST_NAME=localhost`<br>`UPLOAD_SERVICE_PORT=3004`<br>`ASSET_SERVICE_HOST_NAME=localhost`<br>`ASSET_SERVICE_PORT=3005` |
 

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumberString, IsString } from "class-validator"
+import { IsNotEmpty, IsNumberString, IsOptional, IsString } from "class-validator"
 
 export class EnvValidation {
     @IsString()
@@ -11,17 +11,29 @@ export class EnvValidation {
 
     @IsString()
     @IsNotEmpty()
-    AWS_S3_REGION: string
+    CLOUDINARY_CLOUD_NAME: string
 
     @IsString()
     @IsNotEmpty()
-    AWS_S3_BUCKET: string
+    CLOUDINARY_API_KEY: string
 
     @IsString()
     @IsNotEmpty()
-    AWS_ACCESS_KEY: string
+    CLOUDINARY_API_SECRET: string
 
     @IsString()
-    @IsNotEmpty()
-    AWS_SECRET_KEY: string
+    @IsOptional()
+    AWS_S3_REGION?: string
+
+    @IsString()
+    @IsOptional()
+    AWS_S3_BUCKET?: string
+
+    @IsString()
+    @IsOptional()
+    AWS_ACCESS_KEY?: string
+
+    @IsString()
+    @IsOptional()
+    AWS_SECRET_KEY?: string
 }
