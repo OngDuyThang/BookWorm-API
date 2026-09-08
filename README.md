@@ -67,12 +67,12 @@ sh scripts/generate-env.sh
 #### 3. Fill in Required Credentials
 Open the generated environment files and fill in the blank credential values:
 - **PostgreSQL Database Credentials** (`apps/<service>/.env.development`):
-  - `DB_USERNAME=postgres`
-  - `DB_PASSWORD=postgres`
+  - `DB_USERNAME=` *(your database user)*
+  - `DB_PASSWORD=` *(your database password)*
 - **Auth Service & Initial Admin Account** (`apps/auth/.env.development`):
-  - `ADMIN_USERNAME=admin`
-  - `ADMIN_PASSWORD=<your_admin_password>` *(e.g. `Admin@123456`)*
-  - `REDIS_PASSWORD=bookworm_redis` *(or your custom Redis password)*
+  - `ADMIN_USERNAME=` *(your initial administrator username)*
+  - `ADMIN_PASSWORD=` *(your initial administrator password)*
+  - `REDIS_PASSWORD=` *(your Redis password, if configured)*
 
 > [!IMPORTANT]
 > Because `.env.development` files are gitignored to prevent sensitive credential leaks, each microservice enforces strict schema validation on startup. You must fill in these required fields before running the containers.
