@@ -26,15 +26,17 @@ services:
     restart: unless-stopped
     ports:
       - "5432:5432"
+    env_file:
+      - path: apps/auth/.env.development
+        required: false
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -50,9 +52,6 @@ services:
     ports:
       - "5672:5672"     # AMQP protocol port
       - "15672:15672"   # Management Web UI (http://localhost:15672)
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -69,13 +68,21 @@ services:
     container_name: bookworm-redis
     profiles: ["infra", "all"]
     restart: unless-stopped
-    command: redis-server --requirepass bookworm_redis
+    env_file:
+      - path: apps/auth/.env.development
+        required: false
+    command: >
+      sh -c "if [ -n \"$$REDIS_PASSWORD\" ]; then
+        exec redis-server --requirepass \"$$REDIS_PASSWORD\";
+      else
+        exec redis-server;
+      fi"
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "bookworm_redis", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi"]
       interval: 5s
       timeout: 5s
       retries: 10

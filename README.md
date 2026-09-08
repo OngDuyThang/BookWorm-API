@@ -17,6 +17,7 @@
 
 ## Table of Contents
 
+- [Getting Started & Running the Application](#getting-started--running-the-application)
 - [Architectural Overview](#architectural-overview)
 - [Monorepo Workspace Structure](#monorepo-workspace-structure)
 - [Detailed Architecture Diagrams](#detailed-architecture-diagrams)
@@ -34,7 +35,156 @@
   - [RabbitMQ Message Patterns & Payloads](#rabbitmq-message-patterns--payloads)
 - [Security & Authentication Mechanics](#security--authentication-mechanics)
 - [Environment Configuration](#environment-configuration)
-- [Getting Started & Local Development](#getting-started--local-development)
+
+---
+
+## Getting Started & Running the Application
+
+The entire platform is fully containerized and orchestrated with **Docker Compose**. You do **not** need Node.js, npm, PostgreSQL, RabbitMQ, or Redis installed on your host machine — only **Docker** is required.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS, Windows with WSL2) or **Docker Engine & Docker Compose V2** (Linux).
+- *No local Node.js or npm installation required on the host.*
+
+---
+
+### Quick Start
+
+#### 1. Clone the Repository
+```bash
+git clone https://github.com/OngDuyThang/BookWorm-API.git
+cd BookWorm-API
+```
+
+#### 2. Generate Environment Configuration Files
+Before starting the platform for the first time, run the automated setup script to generate `.env.development` files for all microservices from their corresponding `.env.example` templates:
+
+```bash
+sh scripts/generate-env.sh
+```
+
+#### 3. Fill in Required Credentials
+Open the generated environment files and fill in the blank credential values:
+- **PostgreSQL Database Credentials** (`apps/<service>/.env.development`):
+  - `DB_USERNAME=postgres`
+  - `DB_PASSWORD=postgres`
+- **Auth Service & Initial Admin Account** (`apps/auth/.env.development`):
+  - `ADMIN_USERNAME=admin`
+  - `ADMIN_PASSWORD=<your_admin_password>` *(e.g. `Admin@123456`)*
+  - `REDIS_PASSWORD=bookworm_redis` *(or your custom Redis password)*
+
+> [!IMPORTANT]
+> Because `.env.development` files are gitignored to prevent sensitive credential leaks, each microservice enforces strict schema validation on startup. You must fill in these required fields before running the containers.
+
+#### 4. Start the Entire Platform
+Once the environment files are configured, start all infrastructure services (PostgreSQL, RabbitMQ, Redis) and all 7 microservices in foreground mode:
+
+```bash
+docker compose --profile all up
+```
+
+> [!TIP]
+> Running in foreground mode streams live logs from all containers directly to your terminal. Press `Ctrl + C` at any time to gracefully stop all services.
+
+#### 5. Rebuild & Start (After Updates or Dependency Changes)
+When code dependencies change, Dockerfiles are modified, or you need a clean container build:
+
+```bash
+docker compose --profile all up --build
+```
+
+> [!NOTE]
+> **Live Development & Hot Reload**: During everyday coding, you **do not** need to rebuild! All services mount their source directories into the containers with live-reload active (`nest start --watch`). Any code saved in your editor will instantly hot-reload inside the running containers.
+
+#### 6. Stopping the Platform
+To gracefully stop all running containers:
+
+```bash
+docker compose --profile all down
+```
+
+To stop containers and wipe all database and cache volumes (fresh start):
+
+```bash
+docker compose --profile all down -v
+```
+
+---
+
+### Automated Initialization & Seeding
+
+When you start the stack with `docker compose --profile all up`:
+
+1. **Automatic Multi-Database Provisioning**:
+   - The PostgreSQL container automatically mounts and executes [`scripts/init-db.sql`](scripts/init-db.sql) on its first boot.
+   - It provisions all 5 isolated databases: `bookworm_auth`, `bookworm_product`, `bookworm_cart`, `bookworm_order`, and `bookworm_asset`.
+   - TypeORM schema synchronization automatically creates and updates all entity tables on boot.
+
+2. **Automated Initial Admin User Injection**:
+   - The `auth` container automatically runs `apps/auth/src/database/seed-admin.ts` upon startup.
+   - It checks whether the administrator user already exists in the database. If not, it hashes the password with bcrypt and inserts the initial administrator account:
+     - **Username**: Configured via `ADMIN_USERNAME` in `apps/auth/.env.development` (default: `admin`)
+     - **Password**: Configured via `ADMIN_PASSWORD` in `apps/auth/.env.development`
+     - **Email**: `admin@bookworm.com`
+     - **Role**: `admin` (`ROLE.ADMIN` — granted full administrative privileges across all services and the dashboard)
+
+3. **Infrastructure Readiness & Healthchecks**:
+   - All microservices utilize Docker Compose `condition: service_healthy` dependencies. Microservices only boot after PostgreSQL, RabbitMQ, and Redis pass their readiness healthchecks.
+
+---
+
+### Service Access Endpoints
+
+Once the stack is running, all services are accessible via their exposed host ports:
+
+| Service / Tool | Host Port | URL / Interface | Purpose |
+|:---|:---|:---|:---|
+| **Admin MVC Dashboard** | `8081` | `http://localhost:8081` | SSR Back-Office Management Portal (Handlebars) |
+| **Auth Service** | `3000` | `http://localhost:3000/auth/dashboard-login`<br>`http://localhost:3000/auth/login` | Authentication, 2FA/TOTP & Token Issuance |
+| **Product Service** | `3001` | `http://localhost:3001/graphql`<br>`http://localhost:3001/api/products` | Store Catalog, Categories, Authors, Promotions, Reviews |
+| **Cart Service** | `3002` | `http://localhost:3002/graphql` | Customer & Guest Shopping Carts |
+| **Order Service** | `3003` | `http://localhost:3003/graphql`<br>`http://localhost:3003/api/orders` | Checkout, Order Tracking & Stripe Payments |
+| **Upload Service** | `3004` | `http://localhost:3004/api/upload/product-image` | Cloudinary & AWS S3 Image Upload Pipeline |
+| **Asset Service** | `3005` | `http://localhost:3005/api/assets/about-page` | Static Pages & Content Blocks |
+| **RabbitMQ Management** | `15672` | `http://localhost:15672` | Message Broker Web UI (`guest` / `guest`) |
+| **PostgreSQL Database** | `5432` | `localhost:5432` | Relational DB Instance |
+| **Redis Cache** | `6379` | `localhost:6379` | In-Memory Cache & Session Store |
+
+---
+
+### Recommended Host Mapping for Admin Dashboard
+
+The Admin MVC Dashboard uses server-side data fetching combined with client-side browser AJAX calls (for actions like creating products, deleting items, and approving customer orders). To allow your web browser on the host machine to resolve downstream microservices seamlessly, add the following entry to your host `hosts` file:
+
+- **Windows**: Edit `C:\Windows\System32\drivers\etc\hosts` (open Notepad as Administrator)
+- **macOS / Linux / WSL**: Edit `/etc/hosts` (`sudo nano /etc/hosts`)
+
+```text
+127.0.0.1 auth product cart order upload asset mvc
+```
+
+With this mapping, both internal container-to-container calls and host browser AJAX calls resolve identically.
+
+---
+
+### Docker Compose Profiles Guide
+
+If you want to run specific subsets of services instead of the entire platform, use Compose Profiles:
+
+```bash
+# 1. Run only shared infrastructure (PostgreSQL, RabbitMQ, Redis)
+docker compose --profile infra up
+
+# 2. Run infrastructure + a single microservice (e.g. Auth)
+docker compose --profile infra --profile auth up
+
+# 3. Run all microservices without infrastructure
+docker compose --profile services up
+
+# 4. Run a command inside a running container (e.g. manual admin seed)
+docker compose exec auth npm run seed:admin
+```
 
 ---
 
@@ -786,114 +936,29 @@ apps/<service_name>/.env.${NODE_ENV}
 ```
 *(e.g., `apps/auth/.env.development` or `apps/product/.env.production`)*
 
-### Common Variables Across Services
+### Common Variables Across Services (Docker Compose Network)
 
 ```ini
 NODE_ENV=development
-DB_HOST=localhost
+DB_HOST=postgres
 DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-RABBIT_MQ_URI=amqp://guest:guest@localhost:5672
+DB_USERNAME=
+DB_PASSWORD=
+RABBIT_MQ_URI=amqp://guest:guest@rabbitmq:5672
 ```
 
 ### Service-Specific Variable Matrix
 
 | Service | Unique Environment Variables |
 |:---|:---|
-| `auth` | `DB_NAME=bookworm_auth`<br>`SERVICE_PORT=3000`<br>`AUTH_QUEUE=auth_queue`<br>`REDIS_HOST=localhost`<br>`REDIS_PORT=6379`<br>`REDIS_USERNAME=`<br>`REDIS_PASSWORD=`<br>`ACCESS_TOKEN_SECRET=your_jwt_access_secret`<br>`REFRESH_TOKEN_SECRET=your_jwt_refresh_secret`<br>`MAILER_USERNAME=your_gmail@gmail.com`<br>`MAILER_PASSWORD=your_app_password`<br>`GOOGLE_CLIENT_ID=your_client_id`<br>`GOOGLE_CLIENT_SECRET=your_client_secret`<br>`GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback`<br>`FRONTEND_HOST_NAME=localhost`<br>`FRONTEND_PORT=3006`<br>`MVC_HOST_NAME=localhost`<br>`MVC_PORT=8081` |
+| `auth` | `DB_NAME=bookworm_auth`<br>`SERVICE_PORT=3000`<br>`AUTH_QUEUE=auth_queue`<br>`REDIS_HOST=redis`<br>`REDIS_PORT=6379`<br>`REDIS_USERNAME=`<br>`REDIS_PASSWORD=`<br>`ADMIN_USERNAME=admin`<br>`ADMIN_PASSWORD=`<br>`ACCESS_TOKEN_SECRET=your_jwt_access_token_secret`<br>`REFRESH_TOKEN_SECRET=your_jwt_refresh_token_secret`<br>`MAILER_USERNAME=`<br>`MAILER_PASSWORD=`<br>`GOOGLE_CLIENT_ID=your_client_id`<br>`GOOGLE_CLIENT_SECRET=your_client_secret`<br>`GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback`<br>`FRONTEND_HOST_NAME=localhost`<br>`FRONTEND_PORT=3006`<br>`MVC_HOST_NAME=localhost`<br>`MVC_PORT=8081` |
 | `product` | `DB_NAME=bookworm_product`<br>`SERVICE_PORT=3001`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue` |
 | `cart` | `DB_NAME=bookworm_cart`<br>`SERVICE_PORT=3002`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue` |
 | `order` | `DB_NAME=bookworm_order`<br>`SERVICE_PORT=3003`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue`<br>`STRIPE_SECRET_KEY=sk_test_...` |
 | `upload` | `SERVICE_PORT=3004`<br>`CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name`<br>`CLOUDINARY_API_KEY=your_cloudinary_api_key`<br>`CLOUDINARY_API_SECRET=your_cloudinary_api_secret`<br>`AWS_S3_REGION=us-east-1`<br>`AWS_S3_BUCKET=bookworm-assets`<br>`AWS_ACCESS_KEY=your_aws_access_key`<br>`AWS_SECRET_KEY=your_aws_secret_key` |
 | `asset` | `DB_NAME=bookworm_asset`<br>`SERVICE_PORT=3005`<br>`AUTH_QUEUE=auth_queue` |
-| `mvc` | `PORT=8081`<br>`METHOD=http`<br>`AUTH_SERVICE_HOST_NAME=localhost`<br>`AUTH_SERVICE_PORT=3000`<br>`PRODUCT_SERVICE_HOST_NAME=localhost`<br>`PRODUCT_SERVICE_PORT=3001`<br>`CART_SERVICE_HOST_NAME=localhost`<br>`CART_SERVICE_PORT=3002`<br>`ORDER_SERVICE_HOST_NAME=localhost`<br>`ORDER_SERVICE_PORT=3003`<br>`UPLOAD_SERVICE_HOST_NAME=localhost`<br>`UPLOAD_SERVICE_PORT=3004`<br>`ASSET_SERVICE_HOST_NAME=localhost`<br>`ASSET_SERVICE_PORT=3005` |
+| `mvc` | `PORT=8081`<br>`METHOD=http`<br>`AUTH_SERVICE_HOST_NAME=localhost`<br>`AUTH_SERVICE_PORT=3000`<br>`PRODUCT_SERVICE_HOST_NAME=product`<br>`PRODUCT_SERVICE_PORT=3001`<br>`CART_SERVICE_HOST_NAME=cart`<br>`CART_SERVICE_PORT=3002`<br>`ORDER_SERVICE_HOST_NAME=order`<br>`ORDER_SERVICE_PORT=3003`<br>`UPLOAD_SERVICE_HOST_NAME=localhost`<br>`UPLOAD_SERVICE_PORT=3004`<br>`ASSET_SERVICE_HOST_NAME=asset`<br>`ASSET_SERVICE_PORT=3005` |
 
----
-
-## Getting Started & Local Development
-
-### Prerequisites
-- **Node.js**: `v20.x` or later
-- **npm**: `v9.x` or later
-- **PostgreSQL**: `v14+` running on port `5432`
-- **RabbitMQ**: `v3.11+` with AMQP port `5672`
-- **Redis**: `v7+` running on port `6379`
-
-### 1. Installation
-
-```bash
-# Clone repository
-git clone https://github.com/OngDuyThang/BookWorm-API.git
-cd BookWorm-API
-
-# Install dependencies
-npm install
-```
-
-### 2. Configure Environment Files
-
-Create the corresponding `.env.development` files in each service directory under `apps/<service_name>/` using the variable templates listed in [Environment Configuration](#environment-configuration).
-
-### 3. Database Initialization
-
-Create the individual PostgreSQL databases matching your configured `DB_NAME` values:
-```sql
-CREATE DATABASE bookworm_auth;
-CREATE DATABASE bookworm_product;
-CREATE DATABASE bookworm_cart;
-CREATE DATABASE bookworm_order;
-CREATE DATABASE bookworm_asset;
-```
-*(TypeORM is configured with `synchronize: true` in development mode, so schemas and relations will automatically sync when each microservice launches).*
-
-### 4. Running the Microservices
-
-#### Run All Core Services Concurrently:
-```bash
-npm run dev:all
-```
-*This starts `auth`, `product`, `cart`, `order`, `upload`, and `asset` in parallel watch mode.*
-
-#### Run Specific Services Individually:
-```bash
-# Auth Service (Port 3000)
-npm run dev auth
-
-# Product Service (Port 3001)
-npm run dev product
-
-# Cart Service (Port 3002)
-npm run dev cart
-
-# Order Service (Port 3003)
-npm run dev order
-
-# Upload Service (Port 3004)
-npm run dev upload
-
-# Asset Service (Port 3005)
-npm run dev asset
-
-# Admin MVC Dashboard (Port 8081)
-npm run dev mvc
-```
-
-### 5. Running Tests & Linting
-
-```bash
-# Run unit tests across all projects
-npm run test
-
-# Run product unit tests in watch mode
-npm run test:product
-
-# Run linter across apps and libs
-npm run lint
-
-# Format code
-npm run format
-```
 
 ---
 
