@@ -23,7 +23,8 @@
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
     "dev:all": "concurrently \"npm run dev auth\" \"npm run dev product\" \"npm run dev cart\" \"npm run dev order\" \"npm run dev upload\" \"npm run dev asset\"",
-    "test:product": "jest --watch --testPathPattern=src/apps/product/"
+    "test:product": "jest --watch --testPathPattern=src/apps/product/",
+    "seed:admin": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register apps/auth/src/database/seed-admin.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.10.4",

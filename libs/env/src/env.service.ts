@@ -194,4 +194,12 @@ export class Env {
     get CLOUDINARY_API_SECRET() {
         return this.configService.get<string>('CLOUDINARY_API_SECRET');
     }
+
+    get ADMIN_USERNAME() {
+        return this.configService.get<string>('ADMIN_USERNAME');
+    }
+
+    get ADMIN_PASSWORD() {
+        return this.configService.get<string>('ADMIN_PASSWORD');
+    }
 }

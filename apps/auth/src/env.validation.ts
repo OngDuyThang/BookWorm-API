@@ -1,5 +1,5 @@
 import { AbstractEnvValidation } from "@app/env"
-import { IsNotEmpty, IsNumberString, IsString } from "class-validator"
+import { IsNotEmpty, IsNumberString, IsOptional, IsString } from "class-validator"
 
 export class EnvValidation extends AbstractEnvValidation {
     @IsString()
@@ -85,4 +85,12 @@ export class EnvValidation extends AbstractEnvValidation {
     @IsString()
     @IsNotEmpty()
     MVC_PORT: string
+
+    @IsString()
+    @IsOptional()
+    ADMIN_USERNAME?: string
+
+    @IsString()
+    @IsOptional()
+    ADMIN_PASSWORD?: string
 }
