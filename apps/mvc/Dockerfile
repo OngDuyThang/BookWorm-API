@@ -1,8 +1,8 @@
 # ==============================================================================
-# Auth Service Dockerfile (Multi-Stage Build)
+# Admin MVC Dashboard Dockerfile (Multi-Stage Build)
 # ==============================================================================
 # Build command (from monorepo root):
-#   docker build -f apps/auth/Dockerfile -t bookworm-auth:latest .
+#   docker build -f apps/mvc/Dockerfile -t bookworm-mvc:latest .
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -26,19 +26,19 @@ ENV NODE_ENV=development
 COPY package.json package-lock.json ./
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
-EXPOSE 3000
-CMD ["npm", "run", "dev", "auth"]
+EXPOSE 8081
+CMD ["npm", "run", "dev", "mvc"]
 
 # ------------------------------------------------------------------------------
-# 4. Builder Stage: Compile TypeScript into optimized webpack bundle
+# 4. Builder Stage: Compile TypeScript and copy Handlebars views & SVG assets
 # ------------------------------------------------------------------------------
 FROM base AS builder
 COPY package.json package-lock.json ./
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY tsconfig*.json nest-cli.json ./
 COPY libs ./libs
-COPY apps/auth ./apps/auth
-RUN npx nest build auth
+COPY apps/mvc ./apps/mvc
+RUN npx nest build mvc
 
 # ------------------------------------------------------------------------------
 # 5. Production Dependencies Stage: Strip devDependencies
@@ -54,7 +54,7 @@ FROM node:20-alpine AS production
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
-ENV SERVICE_PORT=3000
+ENV PORT=8081
 
 WORKDIR /usr/src/app
 
@@ -64,11 +64,11 @@ RUN apk add --no-cache dumb-init
 # Use non-root node user provided by alpine
 USER node
 
-# Copy production dependencies and compiled service output
+# Copy production dependencies and compiled service output (including views & public assets)
 COPY --chown=node:node --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=builder /usr/src/app/dist/apps/auth ./dist/apps/auth
+COPY --chown=node:node --from=builder /usr/src/app/dist/apps/mvc ./dist/apps/mvc
 
-EXPOSE 3000
+EXPOSE 8081
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/apps/auth/main"]
+CMD ["node", "dist/apps/mvc/main"]

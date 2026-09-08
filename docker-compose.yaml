@@ -1,12 +1,294 @@
+# ==============================================================================
+# BookWorm-API — Centralized Docker Compose Architecture
+# ==============================================================================
+# Usage with Compose Profiles:
+#   - Infrastructure only (PostgreSQL, RabbitMQ, Redis):
+#       docker compose --profile infra up -d
+#   - Specific service + infrastructure:
+#       docker compose --profile infra --profile auth up -d
+#   - All microservices + infrastructure:
+#       docker compose --profile all up -d
+#   - Stop and remove containers:
+#       docker compose --profile all down
+# ==============================================================================
+
+name: bookworm-api
+
 services:
+  # ============================================================================
+  # 1. SHARED INFRASTRUCTURE SERVICES
+  # ============================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: bookworm-postgres
+    profiles: ["infra", "all"]
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - bookworm-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: bookworm-rabbitmq
+    profiles: ["infra", "all"]
+    restart: unless-stopped
+    ports:
+      - "5672:5672"     # AMQP protocol port
+      - "15672:15672"   # Management Web UI (http://localhost:15672)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    networks:
+      - bookworm-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: bookworm-redis
+    profiles: ["infra", "all"]
+    restart: unless-stopped
+    command: redis-server --requirepass bookworm_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "bookworm_redis", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - bookworm-network
+
+  # ============================================================================
+  # 2. MICROSERVICES (Environment loaded purely from apps/<service>/.env.development)
+  # ============================================================================
+
+  # ----------------------------------------------------------------------------
+  # Auth Service (Port 3000)
+  # ----------------------------------------------------------------------------
   auth:
     build:
       context: .
-      dockerfile: ./apps/auth/Dockerfile
+      dockerfile: apps/auth/Dockerfile
       target: development
-    command: npm run dev auth
+    container_name: bookworm-auth
+    profiles: ["auth", "services", "all"]
+    restart: unless-stopped
     ports:
-      - '3000:3000'
-    volumes: -.:/usr/src/app
+      - "3000:3000"
+    command: sh -c "npm run seed:admin && npm run dev auth"
+    env_file:
+      - path: apps/auth/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - bookworm-network
 
-# docker-compose up
+  # ----------------------------------------------------------------------------
+  # Product Service (Port 3001)
+  # ----------------------------------------------------------------------------
+  product:
+    build:
+      context: .
+      dockerfile: apps/product/Dockerfile
+      target: development
+    container_name: bookworm-product
+    profiles: ["product", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - path: apps/product/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bookworm-network
+
+  # ----------------------------------------------------------------------------
+  # Cart Service (Port 3002)
+  # ----------------------------------------------------------------------------
+  cart:
+    build:
+      context: .
+      dockerfile: apps/cart/Dockerfile
+      target: development
+    container_name: bookworm-cart
+    profiles: ["cart", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - path: apps/cart/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bookworm-network
+
+  # ----------------------------------------------------------------------------
+  # Order Service (Port 3003)
+  # ----------------------------------------------------------------------------
+  order:
+    build:
+      context: .
+      dockerfile: apps/order/Dockerfile
+      target: development
+    container_name: bookworm-order
+    profiles: ["order", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    env_file:
+      - path: apps/order/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bookworm-network
+
+  # ----------------------------------------------------------------------------
+  # Upload Service (Port 3004)
+  # ----------------------------------------------------------------------------
+  upload:
+    build:
+      context: .
+      dockerfile: apps/upload/Dockerfile
+      target: development
+    container_name: bookworm-upload
+    profiles: ["upload", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    env_file:
+      - path: apps/upload/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - bookworm-network
+
+  # ----------------------------------------------------------------------------
+  # Asset Service (Port 3005)
+  # ----------------------------------------------------------------------------
+  asset:
+    build:
+      context: .
+      dockerfile: apps/asset/Dockerfile
+      target: development
+    container_name: bookworm-asset
+    profiles: ["asset", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    env_file:
+      - path: apps/asset/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bookworm-network
+
+  # ----------------------------------------------------------------------------
+  # Admin MVC Dashboard (Port 8081)
+  # ----------------------------------------------------------------------------
+  mvc:
+    build:
+      context: .
+      dockerfile: apps/mvc/Dockerfile
+      target: development
+    container_name: bookworm-mvc
+    profiles: ["mvc", "services", "all"]
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    env_file:
+      - path: apps/mvc/.env.development
+        required: false
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - auth
+      - product
+      - cart
+      - order
+      - upload
+      - asset
+    networks:
+      - bookworm-network
+
+# ==============================================================================
+# 3. NETWORKS & VOLUMES
+# ==============================================================================
+
+networks:
+  bookworm-network:
+    name: bookworm-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: bookworm_postgres_data
+  rabbitmq_data:
+    name: bookworm_rabbitmq_data
+  redis_data:
+    name: bookworm_redis_data

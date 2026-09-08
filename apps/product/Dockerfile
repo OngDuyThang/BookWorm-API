@@ -1,8 +1,8 @@
 # ==============================================================================
-# Auth Service Dockerfile (Multi-Stage Build)
+# Product Service Dockerfile (Multi-Stage Build)
 # ==============================================================================
 # Build command (from monorepo root):
-#   docker build -f apps/auth/Dockerfile -t bookworm-auth:latest .
+#   docker build -f apps/product/Dockerfile -t bookworm-product:latest .
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -26,8 +26,8 @@ ENV NODE_ENV=development
 COPY package.json package-lock.json ./
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
-EXPOSE 3000
-CMD ["npm", "run", "dev", "auth"]
+EXPOSE 3001
+CMD ["npm", "run", "dev", "product"]
 
 # ------------------------------------------------------------------------------
 # 4. Builder Stage: Compile TypeScript into optimized webpack bundle
@@ -37,8 +37,8 @@ COPY package.json package-lock.json ./
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY tsconfig*.json nest-cli.json ./
 COPY libs ./libs
-COPY apps/auth ./apps/auth
-RUN npx nest build auth
+COPY apps/product ./apps/product
+RUN npx nest build product
 
 # ------------------------------------------------------------------------------
 # 5. Production Dependencies Stage: Strip devDependencies
@@ -54,7 +54,7 @@ FROM node:20-alpine AS production
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
-ENV SERVICE_PORT=3000
+ENV SERVICE_PORT=3001
 
 WORKDIR /usr/src/app
 
@@ -66,9 +66,9 @@ USER node
 
 # Copy production dependencies and compiled service output
 COPY --chown=node:node --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=builder /usr/src/app/dist/apps/auth ./dist/apps/auth
+COPY --chown=node:node --from=builder /usr/src/app/dist/apps/product ./dist/apps/product
 
-EXPOSE 3000
+EXPOSE 3001
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/apps/auth/main"]
+CMD ["node", "dist/apps/product/main"]
