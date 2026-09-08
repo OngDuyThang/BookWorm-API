@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+{{> head }}
+
+<body>
+    {{> sidebar }}
+    <main>
+        {{> header }}
+        <section class="mt-[68px] p-4 max-w-2xl">
+            <div class="flex items-center space-x-4 pb-8">
+                <a href="/authors" class="text-gray-500 hover:text-gray-800">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <h1 class="font-bold text-lg">Create Author</h1>
+            </div>
+            <form onsubmit="create(event)">
+                <div class="mb-6">
+                    <label for="pen_name" class="block mb-2 text-sm font-medium text-gray-900">
+                        Pen Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="pen_name" id="pen_name"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                        placeholder="Enter author pen name (e.g. J.K. Rowling)" required maxlength="255">
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button type="submit"
+                        class="text-green-500 inline-flex items-center hover:text-white border border-green-500 hover:bg-green-500 focus:ring-4 focus:outline-none focus:ring-green-500 font-semibold rounded-lg text-sm px-5 py-2.5 text-center">
+                        <i class="fa-solid fa-check mr-2"></i> Create
+                    </button>
+                    <a href="/authors"
+                        class="text-gray-600 inline-flex items-center hover:bg-gray-100 border border-gray-300 font-semibold rounded-lg text-sm px-5 py-2.5 text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </section>
+        {{> footer }}
+    </main>
+
+    <script>
+        const createUrl = {{ json createUrl }}
+
+        const create = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const body = Object.fromEntries(formData);
+
+            const accessToken = localStorage.getItem('access_token');
+            try {
+                const res = await fetch(createUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(body),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                toast(data);
+                if (data?.statusCode === 201 || data?.statusCode === 200 || (!data?.statusCode && data?.id)) {
+                    setTimeout(() => {
+                        window.location.href = '/authors';
+                    }, 800);
+                }
+            } catch (err) {
+                console.error('Error creating author:', err);
+            }
+        };
+    </script>
+    {{> common }}
+</body>
+
+</html>

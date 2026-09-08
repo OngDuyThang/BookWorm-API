@@ -12,6 +12,7 @@ const hbsutils = require('hbs-utils')(hbs);
 
 const viewDirectories = [
   'category',
+  'author',
   'product',
   'promotion',
   'review',

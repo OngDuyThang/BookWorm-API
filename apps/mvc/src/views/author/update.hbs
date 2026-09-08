@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+{{> head }}
+
+<body>
+    {{> sidebar }}
+    <main>
+        {{> header }}
+        <section class="mt-[68px] p-4 max-w-2xl">
+            <div class="flex items-center space-x-4 pb-8">
+                <a href="/authors" class="text-gray-500 hover:text-gray-800">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <h1 class="font-bold text-lg">Update Author</h1>
+            </div>
+            <form onsubmit="update(event)">
+                <div class="mb-6">
+                    <label for="pen_name" class="block mb-2 text-sm font-medium text-gray-900">
+                        Pen Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="pen_name" id="pen_name"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+                        value="{{ author.pen_name }}" placeholder="Enter author pen name" required maxlength="255">
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button type="submit"
+                        class="text-green-500 inline-flex items-center hover:text-white border border-green-500 hover:bg-green-500 focus:ring-4 focus:outline-none focus:ring-green-500 font-semibold rounded-lg text-sm px-5 py-2.5 text-center">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Update
+                    </button>
+                    <button type="button" onclick="removeAuthor()"
+                        class="text-red-600 inline-flex items-center hover:text-white border border-red-600 hover:bg-red-600 focus:ring-4 focus:outline-none focus:ring-red-300 font-semibold rounded-lg text-sm px-5 py-2.5 text-center">
+                        <i class="fa-solid fa-trash mr-2"></i> Delete
+                    </button>
+                    <a href="/authors"
+                        class="text-gray-600 inline-flex items-center hover:bg-gray-100 border border-gray-300 font-semibold rounded-lg text-sm px-5 py-2.5 text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </section>
+        {{> footer }}
+    </main>
+
+    <script>
+        const author = {{ json author }}
+        const updateUrl = {{ json updateUrl }}
+
+        const update = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const body = Object.fromEntries(formData);
+
+            const accessToken = localStorage.getItem('access_token');
+            try {
+                const res = await fetch(updateUrl, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(body),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                toast(data);
+                if (data?.statusCode === 200 || data?.statusCode === 204 || (!data?.statusCode && !data?.error)) {
+                    setTimeout(() => {
+                        window.location.href = '/authors';
+                    }, 800);
+                }
+            } catch (err) {
+                console.error('Error updating author:', err);
+            }
+        };
+
+        const removeAuthor = async () => {
+            if (!confirm('Are you sure you want to delete this author?')) return;
+
+            const accessToken = localStorage.getItem('access_token');
+            try {
+                const res = await fetch(updateUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                toast(data);
+                setTimeout(() => {
+                    window.location.href = '/authors';
+                }, 800);
+            } catch (err) {
+                console.error('Error deleting author:', err);
+            }
+        };
+    </script>
+    {{> common }}
+</body>
+
+</html>

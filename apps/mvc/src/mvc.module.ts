@@ -1,5 +1,6 @@
 import { Logger, MiddlewareConsumer, Module, NestModule, Provider } from '@nestjs/common';
 import { CategoryController } from './controllers/category.controller';
+import { AuthorController } from './controllers/author.controller';
 import { EnvModule } from '@app/env';
 import { HttpExceptionFilter, LoggerMiddleware, getEnvFilePath } from '@app/common';
 import { EnvValidation } from './env.validation';
@@ -29,6 +30,7 @@ const providers: Provider[] = [
     MvcController,
     ProductController,
     CategoryController,
+    AuthorController,
     PromotionController,
     ReviewController,
     OrderController
