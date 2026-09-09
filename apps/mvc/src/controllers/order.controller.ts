@@ -13,9 +13,17 @@ export class OrderController {
         return getViewPath('order', file)
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.ORDER_SERVICE_HOST_NAME,
+            this.env.ORDER_SERVICE_PORT,
+            `/api/${path}`
+        )
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_ORDER_SERVICE_HOST_NAME,
             this.env.ORDER_SERVICE_PORT,
             `/api/${path}`
         )
@@ -25,8 +33,8 @@ export class OrderController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('orders')
-        const removeUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('orders')
+        const removeUrl = this.clientUrlEndpoint('orders')
         let orders: object
 
         try {
@@ -50,8 +58,8 @@ export class OrderController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`orders/${id}`)
-        const updateUrl = findOneUrl
+        const findOneUrl = this.internalUrlEndpoint(`orders/${id}`)
+        const updateUrl = this.clientUrlEndpoint(`orders/${id}`)
         let order: any
 
         try {

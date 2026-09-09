@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator"
+import { IsNotEmpty, IsOptional, IsString } from "class-validator"
 
 export class EnvValidation {
     @IsString()
@@ -56,4 +56,20 @@ export class EnvValidation {
     @IsString()
     @IsNotEmpty()
     ASSET_SERVICE_PORT: string
+
+    @IsString()
+    @IsOptional()
+    CLIENT_HOST_NAME?: string
+
+    @IsString()
+    @IsOptional()
+    CLIENT_PRODUCT_SERVICE_HOST_NAME?: string
+
+    @IsString()
+    @IsOptional()
+    CLIENT_ORDER_SERVICE_HOST_NAME?: string
+
+    @IsString()
+    @IsOptional()
+    CLIENT_ASSET_SERVICE_HOST_NAME?: string
 }

@@ -153,18 +153,14 @@ Once the stack is running, all services are accessible via their exposed host po
 
 ---
 
-### Recommended Host Mapping for Admin Dashboard
+### Admin Dashboard Client-Facing Host Resolution
 
-The Admin MVC Dashboard uses server-side data fetching combined with client-side browser AJAX calls (for actions like creating products, deleting items, and approving customer orders). To allow your web browser on the host machine to resolve downstream microservices seamlessly, add the following entry to your host `hosts` file:
+The Admin MVC Dashboard uses server-side data fetching combined with client-side browser AJAX calls (for actions like creating products, deleting items, and approving customer orders). 
 
-- **Windows**: Edit `C:\Windows\System32\drivers\etc\hosts` (open Notepad as Administrator)
-- **macOS / Linux / WSL**: Edit `/etc/hosts` (`sudo nano /etc/hosts`)
+- **Internal calls** made by the MVC container to downstream microservices use Docker internal DNS (`product`, `order`, `asset`).
+- **Client-facing calls** made from your web browser resolve via `CLIENT_HOST_NAME` (which defaults to `localhost` in `apps/mvc/.env.development` and `apps/mvc/.env.example`).
 
-```text
-127.0.0.1 auth product cart order upload asset mvc
-```
-
-With this mapping, both internal container-to-container calls and host browser AJAX calls resolve identically.
+All microservice ports (`3000`–`3005`) are exposed to your host machine via Docker Compose, so browser AJAX calls work seamlessly out of the box without requiring manual `/etc/hosts` modifications. If accessing the dashboard from a custom domain or remote IP, simply configure `CLIENT_HOST_NAME` in `apps/mvc/.env.development`.
 
 ---
 
@@ -957,7 +953,7 @@ RABBIT_MQ_URI=amqp://guest:guest@rabbitmq:5672
 | `order` | `DB_NAME=bookworm_order`<br>`SERVICE_PORT=3003`<br>`AUTH_QUEUE=auth_queue`<br>`PRODUCT_QUEUE=product_queue`<br>`CART_QUEUE=cart_queue`<br>`ORDER_QUEUE=order_queue`<br>`STRIPE_SECRET_KEY=sk_test_...` |
 | `upload` | `SERVICE_PORT=3004`<br>`CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name`<br>`CLOUDINARY_API_KEY=your_cloudinary_api_key`<br>`CLOUDINARY_API_SECRET=your_cloudinary_api_secret`<br>`AWS_S3_REGION=us-east-1`<br>`AWS_S3_BUCKET=bookworm-assets`<br>`AWS_ACCESS_KEY=your_aws_access_key`<br>`AWS_SECRET_KEY=your_aws_secret_key` |
 | `asset` | `DB_NAME=bookworm_asset`<br>`SERVICE_PORT=3005`<br>`AUTH_QUEUE=auth_queue` |
-| `mvc` | `PORT=8081`<br>`METHOD=http`<br>`AUTH_SERVICE_HOST_NAME=localhost`<br>`AUTH_SERVICE_PORT=3000`<br>`PRODUCT_SERVICE_HOST_NAME=product`<br>`PRODUCT_SERVICE_PORT=3001`<br>`CART_SERVICE_HOST_NAME=cart`<br>`CART_SERVICE_PORT=3002`<br>`ORDER_SERVICE_HOST_NAME=order`<br>`ORDER_SERVICE_PORT=3003`<br>`UPLOAD_SERVICE_HOST_NAME=localhost`<br>`UPLOAD_SERVICE_PORT=3004`<br>`ASSET_SERVICE_HOST_NAME=asset`<br>`ASSET_SERVICE_PORT=3005` |
+| `mvc` | `PORT=8081`<br>`METHOD=http`<br>`CLIENT_HOST_NAME=localhost`<br>`AUTH_SERVICE_HOST_NAME=localhost`<br>`AUTH_SERVICE_PORT=3000`<br>`PRODUCT_SERVICE_HOST_NAME=product`<br>`PRODUCT_SERVICE_PORT=3001`<br>`CART_SERVICE_HOST_NAME=cart`<br>`CART_SERVICE_PORT=3002`<br>`ORDER_SERVICE_HOST_NAME=order`<br>`ORDER_SERVICE_PORT=3003`<br>`UPLOAD_SERVICE_HOST_NAME=localhost`<br>`UPLOAD_SERVICE_PORT=3004`<br>`ASSET_SERVICE_HOST_NAME=asset`<br>`ASSET_SERVICE_PORT=3005` |
 
 
 ---

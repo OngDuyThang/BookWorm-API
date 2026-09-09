@@ -13,9 +13,17 @@ export class PromotionController {
         return getViewPath('promotion', file)
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.PRODUCT_SERVICE_HOST_NAME,
+            this.env.PRODUCT_SERVICE_PORT,
+            `/api/${path}`
+        )
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_PRODUCT_SERVICE_HOST_NAME,
             this.env.PRODUCT_SERVICE_PORT,
             `/api/${path}`
         )
@@ -25,8 +33,8 @@ export class PromotionController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('promotions')
-        const removeUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('promotions')
+        const removeUrl = this.clientUrlEndpoint('promotions')
         let promotions: object
 
         try {
@@ -49,7 +57,7 @@ export class PromotionController {
     async create(
         @Res() res: Response
     ) {
-        const createUrl = this.urlEndpoint('promotions')
+        const createUrl = this.clientUrlEndpoint('promotions')
 
         res.render(this.viewPath('create'), { createUrl })
     }
@@ -59,8 +67,8 @@ export class PromotionController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`promotions/${id}`)
-        const updateUrl = findOneUrl
+        const findOneUrl = this.internalUrlEndpoint(`promotions/${id}`)
+        const updateUrl = this.clientUrlEndpoint(`promotions/${id}`)
         let promotion: object
 
         try {

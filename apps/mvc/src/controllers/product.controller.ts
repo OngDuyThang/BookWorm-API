@@ -13,9 +13,17 @@ export class ProductController {
         return getViewPath('product', file)
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.PRODUCT_SERVICE_HOST_NAME,
+            this.env.PRODUCT_SERVICE_PORT,
+            `/api/${path}`
+        )
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_PRODUCT_SERVICE_HOST_NAME,
             this.env.PRODUCT_SERVICE_PORT,
             `/api/${path}`
         )
@@ -25,8 +33,8 @@ export class ProductController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('products')
-        const removeUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('products')
+        const removeUrl = this.clientUrlEndpoint('products')
         let products: object
 
         try {
@@ -49,10 +57,10 @@ export class ProductController {
     async create(
         @Res() res: Response
     ) {
-        const findAllAuthorUrl = this.urlEndpoint('authors')
-        const findAllCatUrl = this.urlEndpoint('categories')
-        const findAllPromotionUrl = this.urlEndpoint('promotions')
-        const createUrl = this.urlEndpoint('products')
+        const findAllAuthorUrl = this.internalUrlEndpoint('authors')
+        const findAllCatUrl = this.internalUrlEndpoint('categories')
+        const findAllPromotionUrl = this.internalUrlEndpoint('promotions')
+        const createUrl = this.clientUrlEndpoint('products')
         const uploadUrl = getUrlEndpoint(
             this.env.UPLOAD_SERVICE_HOST_NAME,
             this.env.UPLOAD_SERVICE_PORT,
@@ -98,11 +106,11 @@ export class ProductController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`products/${id}`)
-        const findAllAuthorUrl = this.urlEndpoint('authors')
-        const findAllCatUrl = this.urlEndpoint('categories')
-        const findAllPromotionUrl = this.urlEndpoint('promotions')
-        const updateUrl = findOneUrl
+        const findOneUrl = this.internalUrlEndpoint(`products/${id}`)
+        const findAllAuthorUrl = this.internalUrlEndpoint('authors')
+        const findAllCatUrl = this.internalUrlEndpoint('categories')
+        const findAllPromotionUrl = this.internalUrlEndpoint('promotions')
+        const updateUrl = this.clientUrlEndpoint(`products/${id}`)
         const uploadUrl = getUrlEndpoint(
             this.env.UPLOAD_SERVICE_HOST_NAME,
             this.env.UPLOAD_SERVICE_PORT,

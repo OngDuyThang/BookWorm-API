@@ -13,9 +13,17 @@ export class CategoryController {
         return getViewPath('category', file)
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.PRODUCT_SERVICE_HOST_NAME,
+            this.env.PRODUCT_SERVICE_PORT,
+            `/api/${path}`
+        )
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_PRODUCT_SERVICE_HOST_NAME,
             this.env.PRODUCT_SERVICE_PORT,
             `/api/${path}`
         )
@@ -25,8 +33,8 @@ export class CategoryController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('categories')
-        const removeUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('categories')
+        const removeUrl = this.clientUrlEndpoint('categories')
         let categories: object
 
         try {
@@ -49,8 +57,8 @@ export class CategoryController {
     async create(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('categories')
-        const createUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('categories')
+        const createUrl = this.clientUrlEndpoint('categories')
         let categories: object
 
         try {
@@ -71,9 +79,9 @@ export class CategoryController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`categories/${id}`)
-        const findAllUrl = this.urlEndpoint('categories')
-        const updateUrl = findOneUrl
+        const findOneUrl = this.internalUrlEndpoint(`categories/${id}`)
+        const findAllUrl = this.internalUrlEndpoint('categories')
+        const updateUrl = this.clientUrlEndpoint(`categories/${id}`)
         let category: object, categories: object
 
         try {

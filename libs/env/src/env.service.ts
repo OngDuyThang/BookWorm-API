@@ -179,6 +179,22 @@ export class Env {
         return this.configService.get<string>('ASSET_SERVICE_PORT');
     }
 
+    get CLIENT_HOST_NAME(): string {
+        return this.configService.get<string>('CLIENT_HOST_NAME') || 'localhost';
+    }
+
+    get CLIENT_PRODUCT_SERVICE_HOST_NAME(): string {
+        return this.configService.get<string>('CLIENT_PRODUCT_SERVICE_HOST_NAME') || this.CLIENT_HOST_NAME;
+    }
+
+    get CLIENT_ORDER_SERVICE_HOST_NAME(): string {
+        return this.configService.get<string>('CLIENT_ORDER_SERVICE_HOST_NAME') || this.CLIENT_HOST_NAME;
+    }
+
+    get CLIENT_ASSET_SERVICE_HOST_NAME(): string {
+        return this.configService.get<string>('CLIENT_ASSET_SERVICE_HOST_NAME') || this.CLIENT_HOST_NAME;
+    }
+
     get STRIPE_SECRET_KEY() {
         return this.configService.get<string>('STRIPE_SECRET_KEY');
     }

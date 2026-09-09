@@ -13,9 +13,17 @@ export class AuthorController {
         return getViewPath('author', file);
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.PRODUCT_SERVICE_HOST_NAME,
+            this.env.PRODUCT_SERVICE_PORT,
+            `/api/${path}`
+        );
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_PRODUCT_SERVICE_HOST_NAME,
             this.env.PRODUCT_SERVICE_PORT,
             `/api/${path}`
         );
@@ -25,8 +33,8 @@ export class AuthorController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('authors');
-        const removeUrl = findAllUrl;
+        const findAllUrl = this.internalUrlEndpoint('authors');
+        const removeUrl = this.clientUrlEndpoint('authors');
         let authors: any[] = [];
 
         try {
@@ -49,7 +57,7 @@ export class AuthorController {
     async create(
         @Res() res: Response
     ) {
-        const createUrl = this.urlEndpoint('authors');
+        const createUrl = this.clientUrlEndpoint('authors');
         res.render(this.viewPath('create'), { createUrl });
     }
 
@@ -58,8 +66,8 @@ export class AuthorController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`authors/${id}`);
-        const updateUrl = findOneUrl;
+        const findOneUrl = this.internalUrlEndpoint(`authors/${id}`);
+        const updateUrl = this.clientUrlEndpoint(`authors/${id}`);
         let author: any = null;
 
         try {

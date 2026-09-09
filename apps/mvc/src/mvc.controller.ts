@@ -54,7 +54,11 @@ export class MvcController {
             this.env.ASSET_SERVICE_PORT,
             '/api/assets/about-page'
         )
-        const updateAboutPageUrl = getAboutPageUrl
+        const updateAboutPageUrl = getUrlEndpoint(
+            this.env.CLIENT_ASSET_SERVICE_HOST_NAME,
+            this.env.ASSET_SERVICE_PORT,
+            '/api/assets/about-page'
+        )
         let content: string
 
         try {

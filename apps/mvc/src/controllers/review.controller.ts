@@ -13,9 +13,17 @@ export class ReviewController {
         return getViewPath('review', file)
     }
 
-    private urlEndpoint(path: string) {
+    private internalUrlEndpoint(path: string) {
         return getUrlEndpoint(
             this.env.PRODUCT_SERVICE_HOST_NAME,
+            this.env.PRODUCT_SERVICE_PORT,
+            `/api/${path}`
+        )
+    }
+
+    private clientUrlEndpoint(path: string) {
+        return getUrlEndpoint(
+            this.env.CLIENT_PRODUCT_SERVICE_HOST_NAME,
             this.env.PRODUCT_SERVICE_PORT,
             `/api/${path}`
         )
@@ -25,8 +33,8 @@ export class ReviewController {
     async list(
         @Res() res: Response
     ) {
-        const findAllUrl = this.urlEndpoint('reviews')
-        const removeUrl = findAllUrl
+        const findAllUrl = this.internalUrlEndpoint('reviews')
+        const removeUrl = this.clientUrlEndpoint('reviews')
         let reviews: object
 
         try {
@@ -50,8 +58,8 @@ export class ReviewController {
         @Param('id', UUIDPipe) id: string,
         @Res() res: Response
     ) {
-        const findOneUrl = this.urlEndpoint(`reviews/${id}`)
-        const updateUrl = findOneUrl
+        const findOneUrl = this.internalUrlEndpoint(`reviews/${id}`)
+        const updateUrl = this.clientUrlEndpoint(`reviews/${id}`)
         let review: object
 
         try {

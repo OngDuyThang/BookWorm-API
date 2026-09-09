@@ -56,6 +56,7 @@ export class UploadController {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             resource_type: 'image',
+            folder: 'bookworm-api'
           },
           (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
             if (error) {
